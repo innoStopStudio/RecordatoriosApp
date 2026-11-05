@@ -26,52 +26,98 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.graphics.Color
 import android.graphics.Color as AndroidColor
+import com.example.recordatoriosapp.data.RecordatorioRepositoryMemoria
+import androidx.activity.viewModels
+import com.example.recordatoriosapp.presentation.ListadoViewModel
+import com.example.recordatoriosapp.presentation.ListadoViewModelFactory
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
+import androidx.compose.material3.CircularProgressIndicator
+import com.example.recordatoriosapp.presentation.ListadoUiState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Button
+import com.example.recordatoriosapp.navigation.NavegacionApp
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.foundation.layout.Arrangement
 
 class MainActivity : ComponentActivity() {
+
+    private val repository = RecordatorioRepositoryMemoria()
+
+    private val listadoViewModel: ListadoViewModel by viewModels {
+        ListadoViewModelFactory(repository)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
+
         setContent {
             RecordatoriosAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    PantallaRecordatorios(
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                NavegacionApp(
+                    listadoViewModel = listadoViewModel,
+                    repository = repository
+                )
             }
         }
     }
 }
 
 @Composable
-fun PantallaRecordatorios(modifier: Modifier = Modifier) {
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
+fun PantallaRecordatorios(
+    recordatorios: List<Recordatorio>,
+    modifier: Modifier = Modifier,
+    onCrear: () -> Unit = {},
+    onVerDetalle: (String) -> Unit = {}
+) {
+    Box(
+        modifier = modifier.fillMaxSize()
     ) {
-        item {
-            Text(
-                text = "Patagonia Servicios Técnicos - " +
-                        "${SimulacionDeDatos.recordatorios.size} recordatorios"
-            )
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                Text(
+                    text = "Patagonia Servicios Técnicos - " +
+                            "${recordatorios.size} recordatorios"
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            items(
+                items = recordatorios,
+                key = { it.id }
+            ) { recordatorio ->
+                TarjetaRecordatorio(
+                    recordatorio = recordatorio,
+                    onClick = { onVerDetalle(recordatorio.id) }
+                )
+            }
         }
 
-        items(
-            items = SimulacionDeDatos.recordatorios,
-            key = { it.id }
-        ) { recordatorio ->
-            TarjetaRecordatorio(recordatorio)
-
-            Spacer(modifier = Modifier.height(8.dp))
+        FloatingActionButton(
+            onClick = onCrear,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+        ) {
+            Text("+")
         }
     }
 }
 
 @Composable
-fun TarjetaRecordatorio(recordatorio: Recordatorio) {
+fun TarjetaRecordatorio(
+    recordatorio: Recordatorio,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
     val codigoColor = SimulacionDeDatos.coloresCategorias[
         recordatorio.categoria.id
     ] ?: "#667085"
@@ -80,7 +126,9 @@ fun TarjetaRecordatorio(recordatorio: Recordatorio) {
         AndroidColor.parseColor(codigoColor)
     )
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -115,6 +163,8 @@ fun TarjetaRecordatorio(recordatorio: Recordatorio) {
 @Composable
 fun PantallaRecordatoriosPreview() {
     RecordatoriosAppTheme {
-        PantallaRecordatorios()
+        PantallaRecordatorios(
+            recordatorios = SimulacionDeDatos.recordatorios
+        )
     }
 }
