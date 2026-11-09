@@ -6,6 +6,8 @@ data class CreacionUiState(
     val descripcion: String = "",
     val categoria: String = "Mantenimiento",
     val prioridad: String = "Media",
+    val fechaAviso: String = "",
+    val ubicacion: String = "",
     val enviando: Boolean = false,
     val guardadoExitoso: Boolean = false,
     val errorGuardado: String? = null
@@ -26,9 +28,13 @@ data class CreacionUiState(
     val prioridadValida: Boolean
         get() = prioridad in listOf("Baja", "Media", "Alta")
 
+    val ubicacionValida: Boolean
+        get() = ubicacion.length <= 120
+
     val formularioValido: Boolean
         get() = tituloValido &&
                 descripcionValida &&
                 categoriaValida &&
-                prioridadValida
+                prioridadValida &&
+                ubicacionValida
 }

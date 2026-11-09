@@ -129,6 +129,80 @@ fun PantallaCrear(
                 }
             }
 
+            var mostrarSelectorFecha by remember { mutableStateOf(false) }
+
+            OutlinedTextField(
+                value = estado.fechaAviso,
+                onValueChange = {},
+                label = { Text("Fecha de aviso (opcional)") },
+                placeholder = { Text("Seleccioná una fecha") },
+                readOnly = true,
+                trailingIcon = {
+                    TextButton(
+                        onClick = { mostrarSelectorFecha = true }
+                    ) {
+                        Text("Elegir")
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (mostrarSelectorFecha) {
+                val datePickerState = rememberDatePickerState()
+
+                DatePickerDialog(
+                    onDismissRequest = { mostrarSelectorFecha = false },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                datePickerState.selectedDateMillis?.let { millis ->
+                                    val fecha = java.time.Instant
+                                        .ofEpochMilli(millis)
+                                        .atZone(java.time.ZoneOffset.UTC)
+                                        .toLocalDate()
+                                        .toString()
+
+                                    viewModel.cambiarFechaAviso(fecha)
+                                }
+                                mostrarSelectorFecha = false
+                            }
+                        ) {
+                            Text("Aceptar")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { mostrarSelectorFecha = false }
+                        ) {
+                            Text("Cancelar")
+                        }
+                    }
+                ) {
+                    DatePicker(state = datePickerState)
+                }
+            }
+
+            if (estado.fechaAviso.isNotBlank()) {
+                TextButton(
+                    onClick = { viewModel.cambiarFechaAviso("") }
+                ) {
+                    Text("Quitar fecha")
+                }
+            }
+
+            OutlinedTextField(
+                value = estado.ubicacion,
+                onValueChange = viewModel::cambiarUbicacion,
+                label = { Text("Ubicación (opcional)") },
+                placeholder = { Text("Ej.: Oficina central, Neuquén") },
+                isError = !estado.ubicacionValida,
+                supportingText = {
+                    Text("${estado.ubicacion.length}/120 caracteres")
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
             estado.errorGuardado?.let { mensaje ->
                 Text(
                     text = mensaje,
@@ -168,8 +242,13 @@ fun PantallaCrear(
 @Composable
 fun PantallaDetalle(
     recordatorio: Recordatorio?,
-    onVolver: () -> Unit
+    onVolver: () -> Unit,
+    onEditar: () -> Unit,
+    onEliminar: () -> Unit
 ) {
+    var confirmarEliminacion by remember {
+        mutableStateOf(false)
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -206,9 +285,67 @@ fun PantallaDetalle(
                     EstadoRecordatorio.Completado -> "Completado"
                     EstadoRecordatorio.Cancelado -> "Cancelado"
                 }}")
-                Text("Fecha de aviso: ${recordatorio.fechaAviso ?: "No definida"}")
-                Text("Ubicación: ${recordatorio.ubicacion ?: "No definida"}")
+                recordatorio.fechaAviso?.let { fecha ->
+                    Text("Fecha de aviso: $fecha")
+                }
+                recordatorio.ubicacion?.let { ubicacion ->
+                    Text("Ubicación: $ubicacion")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = onEditar,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Editar recordatorio")
+                }
+
+                OutlinedButton(
+                    onClick = { confirmarEliminacion = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Eliminar recordatorio")
+                }
+
             }
         }
     }
+
+    if (confirmarEliminacion) {
+        AlertDialog(
+            onDismissRequest = {
+                confirmarEliminacion = false
+            },
+            title = {
+                Text("Eliminar recordatorio")
+            },
+            text = {
+                Text(
+                    "¿Querés eliminar este recordatorio? " +
+                            "La acción se sincronizará con Supabase."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmarEliminacion = false
+                        onEliminar()
+                    }
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        confirmarEliminacion = false
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
 }

@@ -39,6 +39,18 @@ class CreacionViewModel(
         _uiState.update { it.copy(prioridad = valor) }
     }
 
+    fun cambiarFechaAviso(valor: String) {
+        _uiState.update {
+            it.copy(fechaAviso = valor)
+        }
+    }
+
+    fun cambiarUbicacion(valor: String) {
+        _uiState.update {
+            it.copy(ubicacion = valor)
+        }
+    }
+
     fun guardar() {
         val estado = _uiState.value
 
@@ -64,14 +76,15 @@ class CreacionViewModel(
                 val recordatorio = Recordatorio(
                     id = UUID.randomUUID().toString(),
                     titulo = estado.titulo.trim(),
-                    descripcion = estado.descripcion.trim()
-                        .ifBlank { null },
+                    descripcion = estado.descripcion.trim().ifBlank { null },
                     categoria = Categoria(
                         id = estado.categoria,
                         nombre = estado.categoria
                     ),
                     prioridad = prioridadElegida,
-                    estado = EstadoRecordatorio.Pendiente
+                    estado = EstadoRecordatorio.Pendiente,
+                    fechaAviso = estado.fechaAviso.ifBlank { null },
+                    ubicacion = estado.ubicacion.trim().ifBlank { null }
                 )
 
                 repository.guardarRecordatorio(recordatorio)

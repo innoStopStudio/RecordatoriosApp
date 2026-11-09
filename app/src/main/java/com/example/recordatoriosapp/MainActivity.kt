@@ -26,7 +26,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.graphics.Color
 import android.graphics.Color as AndroidColor
-import com.example.recordatoriosapp.data.RecordatorioRepositoryMemoria
+import com.example.recordatoriosapp.data.RecordatorioRepositoryRoom
+import com.example.recordatoriosapp.data.local.RecordatoriosDatabase
 import androidx.activity.viewModels
 import com.example.recordatoriosapp.presentation.ListadoViewModel
 import com.example.recordatoriosapp.presentation.ListadoViewModelFactory
@@ -41,13 +42,85 @@ import com.example.recordatoriosapp.navigation.NavegacionApp
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.recordatoriosapp.data.preferences.PreferenciasRepository
+import com.example.recordatoriosapp.presentation.PreferenciasViewModel
+import com.example.recordatoriosapp.presentation.PreferenciasViewModelFactory
+import android.os.Handler
+import android.os.Looper
 
 class MainActivity : ComponentActivity() {
 
-    private val repository = RecordatorioRepositoryMemoria()
+    private val repository by lazy {
+        val database = RecordatoriosDatabase.obtenerInstancia(
+            applicationContext
+        )
+
+        RecordatorioRepositoryRoom(database.recordatorioDao())
+    }
+
+    private val preferenciasRepository by lazy {
+        PreferenciasRepository(applicationContext)
+    }
+
+    private val preferenciasViewModel: PreferenciasViewModel by viewModels {
+        PreferenciasViewModelFactory(preferenciasRepository)
+    }
 
     private val listadoViewModel: ListadoViewModel by viewModels {
         ListadoViewModelFactory(repository)
+    }
+
+    private lateinit var conectividadObserver: ConectividadObserver
+
+    private val handlerPrincipal = Handler(Looper.getMainLooper())
+
+    private val solicitarSyncPorConectividad = Runnable {
+        repository.solicitarSincronizacion()
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        if (!::conectividadObserver.isInitialized) {
+            conectividadObserver = ConectividadObserver(
+                applicationContext
+            ) {
+                programarSincronizacion()
+            }
+        }
+
+        conectividadObserver.iniciar()
+
+        // También comprobamos la conexión al regresar
+        // a la aplicación desde segundo plano.
+        if (conectividadObserver.hayInternetValidado()) {
+            programarSincronizacion()
+        }
+    }
+
+    private fun programarSincronizacion() {
+        handlerPrincipal.removeCallbacks(
+            solicitarSyncPorConectividad
+        )
+
+        // Agrupamos notificaciones consecutivas de red.
+        handlerPrincipal.postDelayed(
+            solicitarSyncPorConectividad,
+            1500L
+        )
+    }
+
+    override fun onStop() {
+        handlerPrincipal.removeCallbacks(
+            solicitarSyncPorConectividad
+        )
+
+        if (::conectividadObserver.isInitialized) {
+            conectividadObserver.detener()
+        }
+
+        super.onStop()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,10 +129,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            RecordatoriosAppTheme {
+            val preferencias by preferenciasViewModel.preferencias
+                .collectAsStateWithLifecycle()
+
+            RecordatoriosAppTheme(
+                darkTheme = preferencias.temaOscuro
+            ) {
                 NavegacionApp(
                     listadoViewModel = listadoViewModel,
-                    repository = repository
+                    repository = repository,
+                    preferenciasViewModel = preferenciasViewModel
                 )
             }
         }
