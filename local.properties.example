@@ -1,0 +1,9 @@
+# Configuracion local de ejemplo - RecordatoriosApp API 3
+# Copiar este archivo como local.properties y completar los valores.
+
+# Ruta del SDK de Android (ajustar segun la computadora)
+sdk.dir=C:/Users/TU_USUARIO/AppData/Local/Android/Sdk
+
+# Configuracion de Supabase
+SUPABASE_URL=https://TU_PROYECTO.supabase.co/
+SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE
